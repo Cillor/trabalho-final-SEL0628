@@ -1,0 +1,79 @@
+
+
+\section{Introdução}
+O projeto visa implementar um relógio 24 horas completo por meio de displays de sete segmentos, se utilizando de diversos semicondutores baseados em Transistor Transistor Logic (TTL), além de um cristal oscilador para gerar o clock inicial de 32 768Hz. A implementação se dá com quatro displays de 7 segmentos, diversos contadores decimais e divisores para obter o tempo correto.
+
+\section{Corpo do trabalho}
+\subsection{Esquemático}
+\par Apresenta-se na figura \ref{fig:esquematico_clock} a implementação do clock partindo de um sistema com cristal oscilador até um clock de um minuto, e na figura \ref{fig:esquematico_7segs} a implementação do relógio com todos os displays:
+
+
+\subsection{Descrição dos sinais lógicos}
+
+\par Há diversos sinais de clock e outros lógicos utilizado no projeto:
+\par CLK_out é a saída inicial de clock gerada por um cristal oscilador.
+\par CLK_1s e CLK_1min são importantes para contar os segundos e minutos, o primeiro para piscar os dois pontos entre as horas e os minutos para mostrar funcionamento, e o segundo para efetivamente implementar o display dos minutos e os posteriores. Para tal precisamos dividir 32 768Hz por 1 966 080. A forma mais direta de alcançar esse valor é utilizando 15 divisores por dois, um por 5 e um por 12, entretanto, utilizar tal método seria caro e ineficiente. Logo, implementamos os divisores por um conjunto de semicondutores da família 74LSXX: quatro contadores binários de quatro bits 74LS93, que cada um divide por 16 o clock inicial, um divisor por 12 (74LS92) utilizado em parte para gerar um divisor por 6, e um contador decimal 74LS90, também utilizado pela metade para dividir o clock por 5, extraindo CLK_1min. Entretanto, é interessante notar que o último divisor por 16 recebe um clock de 4Hz e sua saída utilizada é de 0.5Hz, mas podemos utilizar outra saída desse mesmo contador como um divisor por 8, que permite a extração de 1Hz do circuito.
+\par CLK_10min, CLK_1h e CLK_10h são utilizados para contar as dezenas de minutos, horas e dezenas de horas, importantes para os displays. Tais sinais são gerados por meio de três contadores decimais 74LS90, sendo que o primeiro recebe CLK_1min e o divide por dez quando se utiliza a saída Q3, gerando CLK_10min; o segundo recebe CLK_10min e conta até cinco, resetando o contador caso os bits 1 e 2 estejam ativos (que só ocorrerá no valor 6), assim gerando CLK_1h; e o terceiro age de forma análoga a CLK_10min para gerar CLK_10h.
+\par O último sinal altamente importante é RESETDAY, o qual utiliza mais um contador 74LS90 para contar até dois e reinicia os quatro contadores decimais citados caso as dezenas de horas cheguem em dois e as unidades de horas cheguem em quatro ao mesmo tempo.
+
+\subsection{Implementação do relógio}
+\par Os displays em si são implementados utilizando os quatro 74LS90 citados em CLK_10min, CLK_1h, CLK_10h e RESETDAY, pois tais semicondutores são contadores decimais que podem ter seus outputs binários enviados para um conversor de binário para BCD 74LS47 e um display de sete segmentos MAN74A correspondente para cada um dos quatro displays.
+
+\subsection{Peculiaridades e melhorias feitas no circuito base}
+\par Os displays tem diversas peculiaridades que tem importância para o bom funcionamento do projeto:
+\par Como comentado, quer-se implementar um relógio que tenha um separador entre horas e minutos que pisque a cada 1s. Para isso ser realizado sem a utilização de LEDs, é possível inverter a orientação do display de sete segmento das dezenas de minutos e utilizar os pontos decimais como separadores entre horas e minutos. Para que o display das dezenas de minutos continue com output correto de números decimais, foi necessário modificar as saídas do display após a saída do conversor BCD, de tal forma que as saídas A, B, C, D, E, F e G do conversor vão para, respectivamente, as entradas D, E, F, A, B, C, e G do mostrador.
+\par Além disso, por motivos estéticos, quando se precisa mostrar o dígito 6, quis-se ativar o segmento A. Tal implementação se deu por duas portas lógicas: a primeira checa se o input provido tem os bits 1 e 2 ligados (isso só ocorrerá para 6 e 7) e, caso ele seja, imediatamente liga o segmento A. Isso não é um problema para o input 7 pois ele já apresenta o segmento A ligado. Tal procedimento se realiza nas unidades de horas e minutos.
+\par Por fim, é interessante notar que nas dezenas de minutos a saída Q3 não é utilizada, pois nunca haverá um horário com dígitos 8 ou 9 nessa casa, da mesma forma que as sáidas Q2 e Q3 nas dezenas de horas, pois os valores acima de dois nunca serão utilizados.
+
+\subsection{Custos associados}
+\subsubsection{Preço do circuito}
+\par Foi pesquisado o custo total que o circuito apresentaria caso montado, desconsiderando os custos necessários para a impressão de uma PCB ou de breadboards e jumpers para implementação de testes. Foi obtida a tabela \ref{tab:custos} para o custo de cada componente do circuito, além da quantidade utilizada:
+
+\begin{table}[H]
+    \centering
+	\caption{Preço dos componentes do circuito do relógio TTL}
+	\begin{tabular}{|c|c|c|c|}   \hline
+Componente & Preço unitário (R$) & Quantidade & Preço total \hline
+74LS90 & 5.9 & 5 & 29.5 \hline
+74LS92 & 3.89 & 1 & 3.89 \hline
+74LS93 & 2.5 & 4 & 10 \hline
+MAN74A & 15 & 4 & 60 \hline
+74LS47 & 7.83 & 4 & 31.32 \hline
+74LS32 & 3.75 & 1 & 3.75 \hline
+74LS08 & 3.75 & 1 & 3.75 \hline
+74LS04 & 3.75 & 1 & 3.75 \hline
+Cristal oscilador & 1.99 & 1 & 1.99 \hline
+Resistor 10M & 0.25 & 1 & 0.25 \hline
+Resistor 100k & 0.128 & 1 & 0.128 \hline
+Capacitor 22p & 1.29 & 2 & 2.58 \hline
+    \end{tabular}
+    \label{tab:custos}
+\end{table}
+
+\par Utilizando-se a tabela como base, o custo total do circuito é de 150.908 R$, o que é alto especialmente pois todos os componentes foram pesquisados para apenas uma implementação, ou seja, descontos com compras de 100 ou 1000 componentes não se aplicaram, aumentando fortemente o custo. Além disso, é importante ressaltar que o custo do circuito toma como base valores de compras no Brasil.
+
+\subsubsection{Potência elétrica utilizada}
+\par Por meio de pesquisas em sites e datasheets, além de aproximações tomando a ddp como 5V, foi obtida uma aproximação da potência do circuito, considerando todas as conexões entre componentes como fios ideais, na tabela \ref{tab:potencia}:
+
+\begin{table}[H]
+	\centering
+	\caption{Potência dissipada por cada componente do relógio TTL}
+	\begin{tabular}{|c|c|c|c|}   \hline
+Componente & Potência unitária (mW) & Quantidade & Potência total \hline
+74LS90 & 45 & 5 & 225 \hline
+74LS92 & 45 & 1 & 45 \hline
+74LS93 & 45 & 4 & 180 \hline
+MAN74A & 480 & 4 & 1920 \hline
+74LS47 & 114 & 4 & 456 \hline
+74LS32 & 46 & 1 & 46 \hline
+74LS08 & 46 & 1 & 46 \hline
+74LS04 & 46 & 1 & 46 \hline
+Cristal oscilador & 0 & 1 & 0 \hline
+Resistor 10M & 0.06 & 1 & 0.06 \hline
+Resistor 100k & 0 & 1 & 0 \hline
+Capacitor 22p & 0 & 2 & 0 \hline
+	\end{tabular}
+	\label{tab:potencia}
+\end{table}
+
+\par Utilizando-se a tabela como base, a potência total do circuito é de 2.96406 Watts, o que, segundo pesquisas, se aproxima da média do mercado para um relógio digital simples.
